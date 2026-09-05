@@ -72,11 +72,6 @@ export interface FamilyRelationData {
   to?: MemberData
 }
 
-export interface MemberWithFamily extends MemberData {
-  relationsFrom: FamilyRelationData[]
-  relationsTo: FamilyRelationData[]
-}
-
 export interface UpcomingEvent {
   id: string
   title: string

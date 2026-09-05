@@ -14,7 +14,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   if (status === "loading") {

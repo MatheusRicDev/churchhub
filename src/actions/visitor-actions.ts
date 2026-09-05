@@ -10,13 +10,6 @@ export async function getVisitorsAction() {
   return visitorService.getVisitors(session.user.churchId)
 }
 
-export async function getVisitorAction(id: string) {
-  const session = await auth()
-  if (!session?.user?.churchId) return null
-
-  return visitorService.getVisitor(id)
-}
-
 export async function createVisitorAction(data: {
   name: string
   phone?: string

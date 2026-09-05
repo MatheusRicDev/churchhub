@@ -9,10 +9,6 @@ export const visitorRepository = {
     })
   },
 
-  async findById(id: string) {
-    return prisma.visitor.findUnique({ where: { id } })
-  },
-
   async countByChurchId(churchId: string) {
     return prisma.visitor.count({ where: { churchId } })
   },

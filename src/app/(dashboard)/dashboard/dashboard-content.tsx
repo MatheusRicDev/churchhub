@@ -9,7 +9,6 @@ import {
   UserCheck,
   Gift,
   Activity,
-  Plus,
 } from "lucide-react"
 import {
   BarChart,
@@ -22,8 +21,6 @@ import {
 } from "recharts"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Loading } from "@/components/ui/loading"
 import { getDashboardStatsAction } from "@/actions/dashboard-actions"

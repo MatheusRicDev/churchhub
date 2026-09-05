@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { Avatar } from "@/components/ui/avatar"
 import { getNotificationsAction } from "@/actions/notifications-actions"
+import { useMounted } from "@/hooks/use-mounted"
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -29,6 +30,7 @@ interface NotificationData {
 export function Header({ onMenuClick }: HeaderProps) {
   const { data: session } = useSession()
   const { theme, setTheme } = useTheme()
+  const mounted = useMounted()
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<NotificationData | null>(null)
@@ -78,7 +80,9 @@ export function Header({ onMenuClick }: HeaderProps) {
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
         >
-          {theme === "dark" ? (
+          {!mounted ? (
+            <Sun className="h-5 w-5 opacity-0" />
+          ) : theme === "dark" ? (
             <Sun className="h-5 w-5" />
           ) : (
             <Moon className="h-5 w-5" />

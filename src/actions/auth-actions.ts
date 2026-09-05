@@ -3,22 +3,60 @@
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { authService } from "@/services/auth-service"
+import {
+  AuthValidationError,
+  hasErrors,
+  validateLogin,
+  validateRegister,
+} from "@/lib/auth-validation"
+import type { FieldErrors } from "@/lib/auth-validation"
 
-export async function loginAction(email: string, password: string) {
+export interface LoginActionResult {
+  success: boolean
+  user?: {
+    id: string
+    email: string
+    name: string
+    churchId: string
+    role: string
+    churchName: string
+    churchSlug: string
+  }
+  fieldErrors?: FieldErrors
+  error?: string
+}
+
+export async function loginAction(
+  email: string,
+  password: string
+): Promise<LoginActionResult> {
+  const fieldErrors = validateLogin(email, password)
+  if (hasErrors(fieldErrors)) {
+    return { success: false, fieldErrors }
+  }
+
+  const normalizedEmail = email.trim().toLowerCase()
+
   try {
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       include: { church: true },
     })
 
     if (!user) {
-      return { error: "Email ou senha inválidos" }
+      return {
+        success: false,
+        fieldErrors: { email: "Não encontramos uma conta com este email" },
+      }
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password)
 
     if (!passwordMatch) {
-      return { error: "Email ou senha inválidos" }
+      return {
+        success: false,
+        fieldErrors: { password: "Senha incorreta. Verifique e tente novamente." },
+      }
     }
 
     return {
@@ -34,8 +72,21 @@ export async function loginAction(email: string, password: string) {
       },
     }
   } catch {
-    return { error: "Erro ao fazer login" }
+    return {
+      success: false,
+      error: "Erro ao fazer login. Tente novamente em alguns instantes.",
+    }
   }
+}
+
+export interface RegisterActionResult {
+  success: boolean
+  user?: {
+    email: string
+    password: string
+  }
+  fieldErrors?: FieldErrors
+  error?: string
 }
 
 export async function registerAction(formData: {
@@ -43,21 +94,37 @@ export async function registerAction(formData: {
   churchName: string
   email: string
   password: string
-}) {
+  confirmPassword: string
+}): Promise<RegisterActionResult> {
+  const fieldErrors = validateRegister(formData)
+  if (hasErrors(fieldErrors)) {
+    return { success: false, fieldErrors }
+  }
+
+  const email = formData.email.trim().toLowerCase()
+
   try {
-    const user = await authService.register(formData)
+    await authService.register({
+      name: formData.name.trim(),
+      churchName: formData.churchName.trim(),
+      email,
+      password: formData.password,
+    })
 
     return {
       success: true,
       user: {
-        email: formData.email,
+        email,
         password: formData.password,
       },
     }
   } catch (error) {
-    if (error instanceof Error) {
-      return { error: error.message }
+    if (error instanceof AuthValidationError) {
+      return { success: false, fieldErrors: { [error.field]: error.message } }
     }
-    return { error: "Erro ao criar conta" }
+    return {
+      success: false,
+      error: "Não foi possível criar sua conta. Tente novamente em alguns instantes.",
+    }
   }
 }

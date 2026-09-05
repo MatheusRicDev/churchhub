@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import { userRepository } from "@/repositories/user-repository"
 import { churchRepository } from "@/repositories/church-repository"
+import { AuthValidationError } from "@/lib/auth-validation"
 
 function generateSlug(name: string): string {
   return name
@@ -19,7 +20,7 @@ export const authService = {
   }) {
     const existingUser = await userRepository.findByEmail(data.email)
     if (existingUser) {
-      throw new Error("Este email já está em uso")
+      throw new AuthValidationError("email", "Este email já está em uso. Tente fazer login.")
     }
 
     const slug = generateSlug(data.churchName)

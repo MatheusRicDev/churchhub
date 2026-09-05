@@ -7,41 +7,81 @@ import { signIn } from "next-auth/react"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Church, Mail, Lock, User, Building2, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { registerAction } from "@/actions/auth-actions"
+import { hasErrors, validateRegister } from "@/lib/auth-validation"
+import { useMounted } from "@/hooks/use-mounted"
+import type { FieldErrors } from "@/lib/auth-validation"
+
+const baseInputClass =
+  "w-full h-11 pl-10 pr-4 rounded-xl border bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 transition-all dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+
+const normalInputClass = `${baseInputClass} border-neutral-200 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:focus:ring-white/20 dark:focus:border-neutral-600`
+
+const errorInputClass = `${baseInputClass} border-red-400 focus:ring-red-500/20 focus:border-red-500 dark:border-red-500/70 dark:focus:ring-red-500/20 dark:focus:border-red-500`
 
 export default function RegisterPage() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const mounted = useMounted()
+  const [errors, setErrors] = useState<FieldErrors>({})
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [autoLoginFailed, setAutoLoginFailed] = useState(false)
+
+  const inputClass = (hasError: boolean) => (hasError ? errorInputClass : normalInputClass)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setLoading(true)
     setError("")
+    setErrors({})
+    setLoading(true)
 
     const formData = new FormData(e.currentTarget)
+    const name = formData.get("name") as string
+    const churchName = formData.get("churchName") as string
+    const email = formData.get("email") as string
     const password = formData.get("password") as string
     const confirmPassword = formData.get("confirmPassword") as string
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem")
+    const clientErrors = validateRegister({
+      name,
+      churchName,
+      email,
+      password,
+      confirmPassword,
+    })
+
+    if (hasErrors(clientErrors)) {
+      setErrors(clientErrors)
       setLoading(false)
       return
     }
 
     const result = await registerAction({
-      name: formData.get("name") as string,
-      churchName: formData.get("churchName") as string,
-      email: formData.get("email") as string,
+      name,
+      churchName,
+      email,
       password,
+      confirmPassword,
     })
 
-    if (result.success && result.user) {
-      setShowSuccess(true)
+    if (!result.success) {
+      if (result.fieldErrors) setErrors(result.fieldErrors)
+      if (result.error) setError(result.error)
+      setLoading(false)
+      return
+    }
 
+    if (!result.user) {
+      setError("Não foi possível concluir o cadastro. Tente novamente.")
+      setLoading(false)
+      return
+    }
+
+    setShowSuccess(true)
+
+    try {
       const signInResult = await signIn("credentials", {
         email: result.user.email,
         password: result.user.password,
@@ -53,10 +93,20 @@ export default function RegisterPage() {
           router.push("/dashboard")
           router.refresh()
         }, 1500)
+        return
       }
-    } else {
-      setError(result.error || "Erro ao criar conta")
-      setLoading(false)
+
+      setAutoLoginFailed(true)
+      setTimeout(() => {
+        router.push("/login")
+        router.refresh()
+      }, 2000)
+    } catch {
+      setAutoLoginFailed(true)
+      setTimeout(() => {
+        router.push("/login")
+        router.refresh()
+      }, 2000)
     }
   }
 
@@ -71,8 +121,16 @@ export default function RegisterPage() {
             Conta criada com sucesso!
           </h2>
           <p className="text-sm text-neutral-500">
-            Redirecionando para o dashboard...
+            {autoLoginFailed
+              ? "Redirecionando para a tela de login..."
+              : "Redirecionando para o dashboard..."}
           </p>
+          <Link
+            href={autoLoginFailed ? "/login" : "/dashboard"}
+            className="inline-block mt-6 text-sm font-semibold text-neutral-900 dark:text-neutral-100 hover:underline"
+          >
+            Continuar agora →
+          </Link>
         </div>
       </div>
     )
@@ -118,7 +176,13 @@ export default function RegisterPage() {
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="absolute top-4 right-4 p-2.5 rounded-xl text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200/50 dark:hover:text-neutral-300 dark:hover:bg-neutral-800 transition-all duration-200 cursor-pointer"
         >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {!mounted ? (
+            <Sun className="h-5 w-5 opacity-0" />
+          ) : theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
         </button>
 
         <div className="w-full max-w-sm animate-scale-in">
@@ -142,87 +206,121 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="name" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
                   Seu nome
                 </label>
                 <div className="relative">
                   <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
+                    id="name"
                     name="name"
                     placeholder="João Silva"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-white/20 dark:focus:border-neutral-600 transition-all"
+                    autoComplete="name"
+                    aria-invalid={Boolean(errors.name)}
+                    className={inputClass(Boolean(errors.name))}
                   />
                 </div>
+                {errors.name && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="churchName" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
                   Nome da Igreja
                 </label>
                 <div className="relative">
                   <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
+                    id="churchName"
                     name="churchName"
                     placeholder="Igreja Batista"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-white/20 dark:focus:border-neutral-600 transition-all"
+                    aria-invalid={Boolean(errors.churchName)}
+                    className={inputClass(Boolean(errors.churchName))}
                   />
                 </div>
+                {errors.churchName && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {errors.churchName}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="email" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
                   Email
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
+                    id="email"
                     name="email"
                     type="email"
                     placeholder="seu@email.com"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-white/20 dark:focus:border-neutral-600 transition-all"
+                    autoComplete="email"
+                    aria-invalid={Boolean(errors.email)}
+                    className={inputClass(Boolean(errors.email))}
                   />
                 </div>
+                {errors.email && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="password" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
                   Senha
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
+                    id="password"
                     name="password"
                     type="password"
-                    placeholder="••••••••"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-white/20 dark:focus:border-neutral-600 transition-all"
+                    placeholder="Mínimo 8 caracteres"
+                    autoComplete="new-password"
+                    aria-invalid={Boolean(errors.password)}
+                    className={inputClass(Boolean(errors.password))}
                   />
                 </div>
+                {errors.password && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {errors.password}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
                   Confirmar senha
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                   <input
+                    id="confirmPassword"
                     name="confirmPassword"
                     type="password"
-                    placeholder="••••••••"
-                    required
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900/20 focus:border-neutral-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:ring-white/20 dark:focus:border-neutral-600 transition-all"
+                    placeholder="Digite a senha novamente"
+                    autoComplete="new-password"
+                    aria-invalid={Boolean(errors.confirmPassword)}
+                    className={inputClass(Boolean(errors.confirmPassword))}
                   />
                 </div>
+                {errors.confirmPassword && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {errors.confirmPassword}
+                  </p>
+                )}
               </div>
 
               {error && (
-                <p className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 rounded-xl border border-red-100 dark:border-red-900/30">
+                <p role="alert" className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-4 py-2.5 rounded-xl border border-red-100 dark:border-red-900/30">
                   {error}
                 </p>
               )}

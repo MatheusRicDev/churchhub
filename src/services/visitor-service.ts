@@ -5,10 +5,6 @@ export const visitorService = {
     return visitorRepository.findByChurchId(churchId)
   },
 
-  async getVisitor(id: string) {
-    return visitorRepository.findById(id)
-  },
-
   async getStats(churchId: string) {
     const total = await visitorRepository.countByChurchId(churchId)
     const startOfMonth = new Date()

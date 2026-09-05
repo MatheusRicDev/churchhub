@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Plus, Pencil, Trash2, Search, Smartphone, Calendar, User, Phone, MessageSquare, MapPin } from "lucide-react"
+import { Plus, Pencil, Trash2, Search, Calendar, User, Phone, MessageSquare, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Modal } from "@/components/ui/modal"

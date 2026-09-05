@@ -27,7 +27,7 @@ async function main() {
 
   const password = await bcrypt.hash("admin123", 12)
 
-  const admin = await prisma.user.create({
+  await prisma.user.create({
     data: {
       churchId: church.id,
       name: "Admin ChurchHub",

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import { Plus, Pencil, Trash2, Search, Phone, Calendar, User, Mail, MapPin, Heart, Church, BookOpen, Users, Link, Unlink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -44,7 +43,6 @@ const genderOptions = [
 ]
 
 export function MembersContent() {
-  const router = useRouter()
   const [members, setMembers] = useState<MemberData[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")

@@ -5,10 +5,6 @@ export const memberService = {
     return memberRepository.findByChurchId(churchId)
   },
 
-  async getMember(id: string) {
-    return memberRepository.findById(id)
-  },
-
   async getStats(churchId: string) {
     const total = await memberRepository.countByChurchId(churchId)
     const startOfMonth = new Date()

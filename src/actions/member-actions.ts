@@ -10,13 +10,6 @@ export async function getMembersAction() {
   return memberService.getMembers(session.user.churchId)
 }
 
-export async function getMemberAction(id: string) {
-  const session = await auth()
-  if (!session?.user?.churchId) return null
-
-  return memberService.getMember(id)
-}
-
 export async function createMemberAction(data: {
   name: string
   email?: string

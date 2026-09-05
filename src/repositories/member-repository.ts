@@ -9,16 +9,6 @@ export const memberRepository = {
     })
   },
 
-  async findById(id: string) {
-    return prisma.member.findUnique({
-      where: { id },
-      include: {
-        relationsFrom: { include: { to: true } },
-        relationsTo: { include: { from: true } },
-      },
-    })
-  },
-
   async countByChurchId(churchId: string) {
     return prisma.member.count({ where: { churchId } })
   },

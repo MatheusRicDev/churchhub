@@ -13,16 +13,6 @@ export const familyRepository = {
     })
   },
 
-  async findByChurchId(churchId: string) {
-    return prisma.familyRelation.findMany({
-      where: { churchId },
-      include: {
-        from: true,
-        to: true,
-      },
-    })
-  },
-
   async create(data: {
     churchId: string
     fromId: string
